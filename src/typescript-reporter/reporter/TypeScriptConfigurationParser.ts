@@ -56,36 +56,36 @@ function getDependenciesFromTypeScriptConfiguration(
   const excluded = new Set<string>(
     (parsedConfiguration.raw?.exclude || []).map((path: string) => resolve(configFileContext, path))
   );
-
-  for (const projectReference of parsedConfiguration.projectReferences || []) {
-    const childConfigFilePath = typescript.resolveProjectReferencePath(projectReference);
-    const childConfigContext = dirname(childConfigFilePath);
-    if (processedConfigFiles.includes(childConfigFilePath)) {
-      // handle circular dependencies
-      continue;
+  if (files.size !== 0){ 
+    for (const projectReference of parsedConfiguration.projectReferences || []) {
+      const childConfigFilePath = typescript.resolveProjectReferencePath(projectReference);
+      const childConfigContext = dirname(childConfigFilePath);
+      if (processedConfigFiles.includes(childConfigFilePath)) {
+        // handle circular dependencies
+        continue;
+      }
+      const childParsedConfiguration = parseTypeScriptConfiguration(
+        typescript,
+        childConfigFilePath,
+        childConfigContext,
+        {},
+        parseConfigFileHost
+      );
+      const childDependencies = getDependenciesFromTypeScriptConfiguration(
+        typescript,
+        childParsedConfiguration,
+        childConfigContext,
+        parseConfigFileHost,
+        [...processedConfigFiles, childConfigFilePath]
+      );
+      childDependencies.files.forEach((file) => {
+        files.add(file);
+      });
+      childDependencies.dirs.forEach((dir) => {
+        dirs.add(dir);
+      });
     }
-    const childParsedConfiguration = parseTypeScriptConfiguration(
-      typescript,
-      childConfigFilePath,
-      childConfigContext,
-      {},
-      parseConfigFileHost
-    );
-    const childDependencies = getDependenciesFromTypeScriptConfiguration(
-      typescript,
-      childParsedConfiguration,
-      childConfigContext,
-      parseConfigFileHost,
-      [...processedConfigFiles, childConfigFilePath]
-    );
-    childDependencies.files.forEach((file) => {
-      files.add(file);
-    });
-    childDependencies.dirs.forEach((dir) => {
-      dirs.add(dir);
-    });
   }
-
   const extensions = [
     typescript.Extension.Ts,
     typescript.Extension.Tsx,
@@ -170,36 +170,36 @@ function getArtifactsFromTypeScriptConfiguration(
     if (parsedConfiguration.options.outDir) {
       dirs.add(resolve(configFileContext, parsedConfiguration.options.outDir));
     }
-  }
+  
 
-  for (const projectReference of parsedConfiguration.projectReferences || []) {
-    const configFile = typescript.resolveProjectReferencePath(projectReference);
-    if (processedConfigFiles.includes(configFile)) {
-      // handle circular dependencies
-      continue;
+    for (const projectReference of parsedConfiguration.projectReferences || []) {
+      const configFile = typescript.resolveProjectReferencePath(projectReference);
+      if (processedConfigFiles.includes(configFile)) {
+        // handle circular dependencies
+        continue;
+      }
+      const parsedConfiguration = parseTypeScriptConfiguration(
+        typescript,
+        configFile,
+        dirname(configFile),
+        {},
+        parseConfigFileHost
+      );
+      const childArtifacts = getArtifactsFromTypeScriptConfiguration(
+        typescript,
+        parsedConfiguration,
+        configFileContext,
+        parseConfigFileHost,
+        [...processedConfigFiles, configFile]
+      );
+      childArtifacts.files.forEach((file) => {
+        files.add(file);
+      });
+      childArtifacts.dirs.forEach((dir) => {
+        dirs.add(dir);
+      });
     }
-    const parsedConfiguration = parseTypeScriptConfiguration(
-      typescript,
-      configFile,
-      dirname(configFile),
-      {},
-      parseConfigFileHost
-    );
-    const childArtifacts = getArtifactsFromTypeScriptConfiguration(
-      typescript,
-      parsedConfiguration,
-      configFileContext,
-      parseConfigFileHost,
-      [...processedConfigFiles, configFile]
-    );
-    childArtifacts.files.forEach((file) => {
-      files.add(file);
-    });
-    childArtifacts.dirs.forEach((dir) => {
-      dirs.add(dir);
-    });
   }
-
   const extensions = [
     typescript.Extension.Dts,
     typescript.Extension.Js,
